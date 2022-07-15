@@ -3,7 +3,7 @@ import numpy as np
 import tqdm
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle
+from scenario_epsilon import epsLU
 from pendulum_utils import plot_init_conditions, partitions_sequences, get_sequences_stats, \
     distribution_subplots, generate_traj_doublepend, partitions_sequences_theta
 
@@ -12,14 +12,11 @@ from pendulum_utils import plot_init_conditions, partitions_sequences, get_seque
 tmax, dt = 0.9, 0.1
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
-N_traj = 20000
+N_traj = 2000
 time_steps = round(tmax/dt) + 1
 friction = False
+# generate trajectories for the double pendulum system
 all_positions = generate_traj_doublepend(N_traj, t, time_steps, friction_flag=friction)
-
-# plot one trajectory
-# plt.plot(all_y[0, :, :])
-# plt.show()
 
 if N_traj <= 1000:
     # for t in range(time_steps//10):
@@ -31,35 +28,38 @@ if N_traj <= 1000:
 # boundaries for pendulum are [-2, -2], [2, 2] with top part actually empty
 parts_per_axis = 3+1
 x_bounds, y_bounds = [0., 2*np.pi], [0., 2*np.pi]
+# computes partition boundaries for theta 1 and theta2
 parts_x_idx = np.linspace(x_bounds[0], x_bounds[1], parts_per_axis)
 parts_y_idx = np.linspace(y_bounds[0], y_bounds[1], parts_per_axis)
 
+# computes the partitions for all trajectories
 all_trajectory_parts = partitions_sequences(all_positions, [parts_x_idx, parts_y_idx], N_traj,
                                             time_steps, parts_per_axis)
 
 n_vars = 2
-# parts_theta = np.linspace(0., 2*np.pi, parts_per_axis)
-# all_trajectory_parts = partitions_sequences_theta(all_positions, parts_theta, N_traj,
-#                                             time_steps, parts_per_axis)
-
-
 print(f'Partitions: {all_trajectory_parts}')
 
 # find all ell-sequences from a trajectory
-ell = 5
+ell = 3
 print(f'Total trajectories: {N_traj}. \nVisitable ell-sequences: {(parts_per_axis-1)**(n_vars*ell)}. ')
 
 ell_seq_trajectory, ell_seq_init, ell_seq_rnd = get_sequences_stats(all_trajectory_parts, ell, time_steps)
 
 if len(ell_seq_trajectory) > len(ell_seq_init) and len(ell_seq_trajectory) > len(ell_seq_rnd):
-    print(f'No chance mate: visited {len(ell_seq_trajectory)}, initial: {len(ell_seq_init)}, '
+    print(f'Visited ell-sequences are more than the initial ones: \n'
+          f'visited {len(ell_seq_trajectory)}, initial: {len(ell_seq_init)}, '
           f'random: {len(ell_seq_rnd)}.')
 elif len(ell_seq_trajectory) == len(ell_seq_rnd) and len(ell_seq_trajectory) > len(ell_seq_init):
-    print(f'Random saves: visited {len(ell_seq_trajectory)}, initial: {len(ell_seq_init)}, '
+    print(f'Randomly picked ell-sequences == visited partitions: \n'
+          f'visited {len(ell_seq_trajectory)}, initial: {len(ell_seq_init)}, '
           f'random: {len(ell_seq_rnd)}.')
 else:
-    print(f'Maybe, maybe, maybe....')
+    print(f'Same number of seen and initial sequences.')
 
+print('-'*80)
+epsi_lo, epsi_up = epsLU(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
+print(f'Epsilon Bound: {epsi_up}')
+print('-'*80)
 
 
 # new data
@@ -69,8 +69,6 @@ t = np.arange(0, tmax+dt, dt)
 time_steps = round(tmax/dt) + 1
 all_positions = generate_traj_doublepend(N_traj, t, time_steps, friction_flag=friction)
 # sequences of partitions
-# all_trajectory_parts = partitions_sequences_theta(all_positions, parts_theta, N_traj,
-#                                             time_steps, parts_per_axis)
 all_trajectory_parts = partitions_sequences(all_positions, [parts_x_idx, parts_y_idx], N_traj,
                                             time_steps, parts_per_axis)
 

@@ -8,7 +8,8 @@ from scipy.integrate import solve_ivp
 
 
 def deriv(y, t, L1, L2, m1, m2, friction_coeff):
-    """Return the first derivatives of y = theta1, z1, theta2, z2."""
+    """Return the first derivatives of the double pendulum
+    y = theta1, z1, theta2, z2."""
     g = 9.81
     theta1, z1, theta2, z2 = y
 
@@ -22,6 +23,7 @@ def deriv(y, t, L1, L2, m1, m2, friction_coeff):
              m2*L2*z2**2*s*c + friction_coeff*z1*c + friction_coeff*z2*(m1+m2)/m2 ) / L2 / (m1 + m2*s**2)
     return theta1dot, z1dot, theta2dot, z2dot
 
+
 def calc_E(y, m1, m2, L1, L2):
     """Return the total energy of the system."""
     g = 9.81
@@ -33,6 +35,14 @@ def calc_E(y, m1, m2, L1, L2):
 
 
 def generate_traj_doublepend(N_traj, t, time_steps, friction_flag=False):
+    """
+    Generates trajectories for the double pendulum system
+    :param N_traj: int, number of trajectories
+    :param t: list, time instants where to evaluate the van der Pol solution
+    :param time_steps: int,
+    :param friction_flag: bool, if True pendulum with friction
+    :return:
+    """
     # Pendulum rod lengths (m), bob masses (kg).
     L1, L2 = 1, 1
     m1, m2 = 1, 1
@@ -73,6 +83,14 @@ def generate_traj_doublepend(N_traj, t, time_steps, friction_flag=False):
 
 
 def generate_vanderpol_traj(N_traj, t, time_steps, domain_bounds):
+    """
+    Generate trajectories for the Van der Pol system (continuous time)
+    :param N_traj: int, number of trajectories
+    :param t: list, time instants where to evaluate the van der Pol solution
+    :param time_steps: int,
+    :param domain_bounds: list,
+    :return: array of N trajectories
+    """
 
     def vdp(t, z, mu):
         x, y = z
@@ -92,6 +110,12 @@ def generate_vanderpol_traj(N_traj, t, time_steps, domain_bounds):
     return all_y
 
 def plot_init_conditions(positions, ax):
+    """
+    plots the initial conditions of the double pendulum
+    :param positions:
+    :param ax:
+    :return:
+    """
     # Plot and save an image of the double pendulum configuration for time
     # point i.
     # The pendulum rods.
@@ -109,7 +133,17 @@ def plot_init_conditions(positions, ax):
         # ax.add_patch(c2)
 
 
-def partitions_sequences(all_positions, boundaries, N_traj, time_steps, parts_per_axis):
+def partitions_sequences(all_positions, boundaries, N_traj, time_steps, parts_per_axis, reset_angles=True):
+    """
+    from array of trajectories computes array of corresponding partitions
+    :param all_positions: array,
+    :param boundaries: list,
+    :param N_traj: int,
+    :param time_steps: int,
+    :param parts_per_axis: int,
+    :param reset_angles: bool, if True angles are within [0, 2*pi]
+    :return:
+    """
 
     parts_x_idx, parts_y_idx = boundaries
 
@@ -119,7 +153,8 @@ def partitions_sequences(all_positions, boundaries, N_traj, time_steps, parts_pe
 
         trajectory = all_positions[j, :, :]
         # angles between 0 and 2*pi
-        trajectory = trajectory % (2*np.pi)
+        if reset_angles:
+            trajectory = trajectory % (2*np.pi)
         trajectory_labels = []
 
         if trajectory.shape[1] == 4:
@@ -228,7 +263,8 @@ def get_sequences_stats(all_trajectory_parts, ell, time_steps):
     ell_seq_init = set()
     ell_seq_rnd = set()
     for trajectory_parts in all_trajectory_parts:
-        for idx in range(0, time_steps-ell):
+        idx = 0
+        for idx in range(0, time_steps-ell+1):
             ell_seq_trajectory.add( tuple(trajectory_parts[idx:idx+ell]) )
         # find all ell-seq from INITIAL STATE
         ell_seq_init.add(tuple(trajectory_parts[0:ell]))
@@ -245,34 +281,76 @@ def get_sequences_stats(all_trajectory_parts, ell, time_steps):
 # subplots
 def distribution_subplots(all_trajectory_parts, time_steps, parts_per_axis, n_vars, plot_every=1, ell=1):
 
-    plots_per_row = 5
+    plots_per_row = 2
     N_traj = all_trajectory_parts.shape[0]
 
-    new_time_steps = time_steps // plot_every
+    new_time_steps = (time_steps-ell) // plot_every
 
     fig, axes = plt.subplots(np.maximum(1, np.ceil(new_time_steps/plots_per_row).astype(int)), plots_per_row)
     fig.suptitle(f'Distribution of {ell}-sequences')
 
     scale_bins_with_ell = np.flip(np.array([(parts_per_axis-1)**(n_vars*i) for i in range(ell)]))
 
+    rotation_labels = 75
+
+    print(f'Plotting histograms...')
+
     for t in tqdm.tqdm(range(new_time_steps)):
         x_at_step_k = all_trajectory_parts[:, plot_every*t:plot_every*t + ell]
         # augmented_x = np.zeros((x_at_step_k.shape[0]-ell+1, ))
 
+        ell_sequences = np.unique(x_at_step_k, axis=0)
+
+        # create labels for ell sequences
+        labels = []
+
+        for ell_seq in ell_sequences:
+            ell_label = []
+            for partition in ell_seq:
+                partition_label = '$P_{' + str(int(partition+1)) + '}$'
+                ell_label.append(partition_label)
+            s = ', '.join(ell_label)
+            labels.append('(' + s + ')')
+
         augmented_x = x_at_step_k @ scale_bins_with_ell
 
+        # give new values for nicer plots
+        unique_vals = np.unique(augmented_x)
+        new_x_vals = np.zeros(augmented_x.shape)
+        for idx in range(len(augmented_x)):
+            new_x_vals[idx] = np.where(unique_vals == augmented_x[idx])[0]
+
+
         if new_time_steps//plots_per_row > 0 and new_time_steps/plots_per_row > 1:
-            count, bins, ignored = axes[t // plots_per_row, t % plots_per_row].hist(augmented_x,
-                                                                                    bins=int((parts_per_axis - 1) ** (n_vars * ell)),
+            count, bins, ignored = axes[t // plots_per_row, t % plots_per_row].hist(new_x_vals,
+                                                                                    bins=[i for i in range(len(unique_vals)+1)],
+                                                                                    # int((parts_per_axis - 1) ** (n_vars * ell)),
                                                                                     density=False)
             axes[t//plots_per_row, t%plots_per_row].set_title(f'Distribution at time {plot_every*t}')
-            axes[t//plots_per_row, t%plots_per_row].set_ylim([0, N_traj//(parts_per_axis*n_vars**ell)])
+            # axes[t//plots_per_row, t%plots_per_row].set_ylim([0, N_traj//(parts_per_axis**(n_vars*ell))])
+
+            ell_seq_place = ell_sequences @ scale_bins_with_ell
+            new_ell_seq_place = np.zeros(ell_seq_place.shape)
+            for idx in range(len(ell_seq_place)):
+                new_ell_seq_place[idx] = np.where(unique_vals == ell_seq_place[idx])[0] + 0.5
+
+            axes[t//plots_per_row, t%plots_per_row].set_xticks(new_ell_seq_place,
+                                                               labels,
+                                                               rotation=rotation_labels)
         else:
-            count, bins, ignored = axes[t % plots_per_row].hist(augmented_x,
-                                                                bins=int((parts_per_axis - 1) ** (n_vars * ell)),
+            count, bins, ignored = axes[t % plots_per_row].hist(new_x_vals,
+                                                                bins=[i for i in range(len(unique_vals)+1)],
                                                                 density=False)
             axes[t % plots_per_row].set_title(f'Distribution at time {plot_every*t}')
-            axes[t % plots_per_row].set_ylim([0, N_traj // (parts_per_axis*n_vars**ell)])
+            # axes[t % plots_per_row].set_ylim([0, N_traj // (parts_per_axis**(n_vars*ell))])
+            ell_seq_place = ell_sequences @ scale_bins_with_ell
+            new_ell_seq_place = np.zeros(ell_seq_place.shape)
+            for idx in range(len(ell_seq_place)):
+                new_ell_seq_place[idx] = np.where(unique_vals == ell_seq_place[idx])[0] + 0.5
+
+            axes[t % plots_per_row].set_xticks(new_ell_seq_place,
+                                               labels,
+                                               rotation=rotation_labels)
 
 
 
