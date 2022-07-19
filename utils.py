@@ -5,6 +5,7 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from scipy.integrate import solve_ivp
+from collections import Counter
 
 
 def deriv(y, t, L1, L2, m1, m2, friction_coeff):
@@ -49,7 +50,7 @@ def generate_traj_doublepend(N_traj, t, time_steps, friction_flag=False):
     friction_coeff = 0.
     if friction_flag:
         friction_coeff = -5.
-    init_angles = np.random.uniform(low=-2 * np.pi, high=2 * np.pi, size=(N_traj, 2))
+    init_angles = np.random.uniform(low=0., high=2 * np.pi, size=(N_traj, 2))
     all_y = np.zeros((N_traj, time_steps, 4))
     for idx, thetas in tqdm.tqdm(enumerate(init_angles)):
         # y0 = np.array([3*np.pi/7, 0, 3*np.pi/4, 0])
@@ -65,8 +66,9 @@ def generate_traj_doublepend(N_traj, t, time_steps, friction_flag=False):
         # Unpack z and theta as a function of time
         theta1, theta2 = y[:, 0], y[:, 2]
 
-        all_positions[idx, :, 0] = theta1
-        all_positions[idx, :, 1] = theta2
+        # normalize over [0, 2*pi]
+        all_positions[idx, :, 0] = theta1 % 2*np.pi
+        all_positions[idx, :, 1] = theta2 % 2*np.pi
 
         # Convert to Cartesian coordinates of the two bob positions.
         # x1 = L1 * np.sin(theta1)
@@ -277,6 +279,29 @@ def get_sequences_stats(all_trajectory_parts, ell, time_steps):
 
     return ell_seq_trajectory, ell_seq_init, ell_seq_rnd
 
+def get_partition_stats(all_trajectory_parts, ell):
+    """
+
+    :param all_trajectory_parts:
+    :param ell:
+    :return:
+    """
+    useful_time_steps = all_trajectory_parts.shape[1]-ell
+    tot_traj = all_trajectory_parts.shape[0]
+    all_ell_sequences = np.zeros((useful_time_steps * tot_traj, ell))
+    for idx in range(useful_time_steps):
+
+        ith_sequence = all_trajectory_parts[:, idx:idx+ell]
+        all_ell_sequences[idx*tot_traj:(idx+1)*tot_traj, :] = ith_sequence
+
+    stats = np.unique(all_ell_sequences, axis=0, return_counts=True)
+
+    # counter dict
+    stats_dict = {}
+    for idx, ell_seq in enumerate(stats[0]):
+        stats_dict[tuple(ell_seq)] = stats[1][idx]
+
+    return stats_dict, useful_time_steps * tot_traj
 
 # subplots
 def distribution_subplots(all_trajectory_parts, time_steps, parts_per_axis, n_vars, plot_every=1, ell=1):
@@ -291,7 +316,7 @@ def distribution_subplots(all_trajectory_parts, time_steps, parts_per_axis, n_va
 
     scale_bins_with_ell = np.flip(np.array([(parts_per_axis-1)**(n_vars*i) for i in range(ell)]))
 
-    rotation_labels = 75
+    rotation_labels = 75  # rotates the label
 
     print(f'Plotting histograms...')
 

@@ -4,7 +4,7 @@ import tqdm
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 from scenario_epsilon import epsLU
-from pendulum_utils import plot_init_conditions, partitions_sequences, get_sequences_stats, \
+from utils import plot_init_conditions, partitions_sequences, get_sequences_stats, \
     distribution_subplots, generate_vanderpol_traj
 
 
