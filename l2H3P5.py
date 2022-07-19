@@ -47,7 +47,7 @@ for i in range(1,M+1):
                         if y not in violating_long_strings:
                             violating_long_strings.append(y)
                             violation += y[1]
-        ### Probability of seeing all the possible N outcomes with sequences made up of any combination of the chosen
+        ### Probability of seeing all the possible N long outcomes with sequences made up of any combination of the chosen H-sequences
         outcome_probability = np.power((P_chosen), N)
         Pmf_exact_symbols[chosen] = outcome_probability
         ### Subtract repeated outcomes to obtain all sequences that contain at least one element of each chosen ones
@@ -69,9 +69,9 @@ for i in range(1,M+1):
             Pmf_seen[i-1] -= Pmf_seen[j-1]*comb(M-j, i-j)
     print("Probability of seeing exactly ", i, " symbols ", Pmf_seen[i - 1])
 
-print("Pmf_seen ", sum(Pmf_seen))
-print("Pmf_exact_symbols ", sum(Pmf_exact_symbols.values()))
-print("Pmf_V ", sum(Pmf_V))
+print("Pmf_seen sums to ", sum(Pmf_seen))
+print("Pmf_exact_symbols sums to ", sum(Pmf_exact_symbols.values()))
+print("Pmf_V sums to ", sum(Pmf_V))
 ### Sort arrays
 p = V_support.argsort()
 V_support = V_support[p]
