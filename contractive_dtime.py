@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from utils import plot_init_conditions, partitions_1D, get_sequences_stats, \
     distribution_subplots, generate_vanderpol_traj
-from scenario_epsilon import epsLU
+from scenario_epsilon import eps_general
 
 
 def contractive_system(x0, N_steps, epsilon):
@@ -35,7 +35,7 @@ n_vars = 1
 traj_domain_bounds = [0, 1]
 all_positions = np.zeros((N_traj, time_steps))
 lamb = 1e-2
-for i in range(N_traj):
+for i in tqdm.tqdm(range(N_traj)):
     x0 = np.random.uniform(low=0., high=1., size=(1,))
     all_positions[i, :] = contractive_system(x0, time_steps, lamb)
 
@@ -70,7 +70,7 @@ else:
 
 
 print('-'*80)
-epsi_lo, epsi_up = epsLU(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
+epsi_up = eps_general(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
 print(f'Epsilon Bound: {epsi_up}')
 print('-'*80)
 

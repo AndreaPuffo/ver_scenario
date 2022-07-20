@@ -3,7 +3,7 @@ import numpy as np
 import tqdm
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
-from scenario_epsilon import epsLU
+from scenario_epsilon import eps_general
 from utils import plot_init_conditions, partitions_sequences, get_sequences_stats, \
     distribution_subplots, generate_traj_doublepend, get_partition_stats
 
@@ -60,9 +60,9 @@ else:
     print(f'Same number of seen and initial sequences.')
 
 print('-'*80)
-epsi_lo, epsi_up = epsLU(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
+epsi_up = eps_general(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
 print(rf'Epsilon Bound with All $\ell$-sequences: {epsi_up}')
-epsi_lo, epsi_up = epsLU(k=len(ell_seq_init), N=N_traj, beta=1e-12)
+epsi_up = eps_general(k=len(ell_seq_init), N=N_traj, beta=1e-12)
 print(rf'Epsilon Bound with Initial $\ell$-sequences: {epsi_up}')
 print('-'*80)
 
@@ -107,7 +107,7 @@ print('Computing N to match gamma...')
 while epsi_up > empirical_gamma:
     N_traj = 10*N_traj
     print(f'Currently at {N_traj}')
-    epsi_lo, epsi_up = epsLU(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
+    epsi_up = eps_general(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
 
 if epsi_up <= empirical_gamma:
     print(f'Need {N_traj} to match the empirical gamma!')

@@ -52,7 +52,8 @@ def generate_traj_doublepend(N_traj, t, time_steps, friction_flag=False):
         friction_coeff = -5.
     init_angles = np.random.uniform(low=0., high=2 * np.pi, size=(N_traj, 2))
     all_y = np.zeros((N_traj, time_steps, 4))
-    for idx, thetas in tqdm.tqdm(enumerate(init_angles)):
+    for idx in tqdm.tqdm(range(N_traj)):
+        thetas = init_angles[idx]
         # y0 = np.array([3*np.pi/7, 0, 3*np.pi/4, 0])
         y0 = np.array([thetas[0], 0, thetas[1], 0])
         # Do the numerical integration of the equations of motion
@@ -103,7 +104,8 @@ def generate_vanderpol_traj(N_traj, t, time_steps, domain_bounds):
 
     init_pos = np.random.uniform(low=domain_lb, high=domain_ub, size=(N_traj, 2))
     all_y = np.zeros((N_traj, time_steps, 2))
-    for idx, x0 in tqdm.tqdm(enumerate(init_pos)):
+    for idx in tqdm.tqdm(range(N_traj)):
+        x0 = init_pos[idx]
         sol = solve_ivp(vdp, t_span=[t[0], t[-1]], y0=x0, t_eval=t, args=(mu, ))
         all_y[idx, :, :] = sol.y.T
     #     plt.plot(sol.y[0], sol.y[1])

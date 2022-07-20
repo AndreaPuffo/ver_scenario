@@ -3,7 +3,7 @@ import numpy as np
 import tqdm
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
-from scenario_epsilon import epsLU
+from scenario_epsilon import eps_general
 from utils import plot_init_conditions, partitions_sequences, get_sequences_stats, \
     distribution_subplots, generate_vanderpol_traj
 
@@ -50,7 +50,7 @@ else:
 
 
 print('-'*80)
-epsi_lo, epsi_up = epsLU(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
+epsi_up = eps_general(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
 print(f'Epsilon Bound: {epsi_up}')
 print('-'*80)
 
