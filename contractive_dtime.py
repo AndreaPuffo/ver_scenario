@@ -24,10 +24,10 @@ def contractive_system(x0, N_steps, epsilon):
 
 
 # Maximum time, time point spacings and the time grid (all in s).
-tmax, dt = 10, 1
+tmax, dt = 2, 1
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
-N_traj = 20000
+N_traj = 10000
 time_steps = tmax + 1
 n_vars = 1
 
@@ -78,8 +78,22 @@ if epsi_up < lamb:
     print(f'Abstraction *should* simulate system')
 
 
+desired_gamma = 1e-6
+# find N to match the empirical gamma
+print('Computing N to match gamma...')
+N_traj = 10000
+while epsi_up > desired_gamma:
+    N_traj = 10*N_traj
+    print(f'Currently at {N_traj}')
+    epsi_up = eps_general(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
+    print(f'Epsilon: {epsi_up}')
+
+if epsi_up <= desired_gamma:
+    print(f'Need {N_traj} to match the empirical gamma!')
+
 # new data
 tmax = 10
+N_traj = 100000
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
 time_steps = tmax + 1

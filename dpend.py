@@ -12,7 +12,7 @@ SEED = 5190
 np.random.seed(SEED)
 
 # Maximum time, time point spacings and the time grid (all in s).
-tmax, dt = 0.3, 0.1
+tmax, dt = 0.5, 0.1
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
 N_traj = 10000
@@ -40,7 +40,6 @@ all_trajectory_parts = partitions_sequences(all_positions, [parts_x_idx, parts_y
                                             time_steps, parts_per_axis)
 
 n_vars = 2
-print(f'Partitions: {all_trajectory_parts}')
 
 # find all ell-sequences from a trajectory
 ell = 2
@@ -68,7 +67,13 @@ print('-'*80)
 
 
 # new data
-tmax = 0.6
+if (parts_per_axis-1)**(n_vars*ell) == len(ell_seq_trajectory):
+    print('-'*80)
+    print('Found all possible ell-sequences! The script will stop here.')
+    exit()
+
+
+tmax = 0.5
 N_traj = 100000
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
