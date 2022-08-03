@@ -82,7 +82,7 @@ print('-'*80)
 
 
 # new data
-tmax = 0.6
+# tmax = 0.6
 N_traj = 100000
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
@@ -97,6 +97,19 @@ print(f'Sequences of partitions: {all_trajectory_parts}')
 print(f'Total trajectories: {N_traj}. \nVisitable Partitions: {(parts_per_axis-1)**(n_vars*ell)}. ')
 
 new_ell_seq_trajectory, new_ell_seq_init, new_ell_seq_rnd = get_sequences_stats(all_trajectory_parts, ell, time_steps)
+
+# Set cover problem to find complexity
+
+subsets = []
+for H_seq in all_trajectory_parts:
+    seq_of_ell_seq = []
+    for i in range(0,len(H_seq)-ell+1):
+        seq_of_ell_seq.append(tuple(H_seq[i:i+ell]))
+    subsets.append(set(seq_of_ell_seq))
+
+cover = set_cover(new_ell_seq_trajectory, subsets)
+
+print("Complexity: ", len(cover))
 
 ell_seq_stats, tot_ell_sequences = get_partition_stats(all_trajectory_parts, ell)
 
@@ -117,11 +130,14 @@ for ell_seq in only_new_sequences:
     print(f'Empirical frequency of {ell_seq}: {empirical_gamma}')
 
 # find N to match the empirical gamma
-print('Computing N to match gamma...')
+print('Computing N to match gamma with new complexity...')
 while epsi_up > empirical_gamma:
-    N_traj = 10*N_traj
+    N_traj = 1.5*N_traj
     print(f'Currently at {N_traj}')
-    epsi_up = eps_general(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
+    epsi_up = eps_general(k=len(cover), N=N_traj, beta=1e-12)
+
+if epsi_up <= empirical_gamma:
+    print(f'Need {N_traj} to match the empirical gamma!')
 
 if epsi_up <= empirical_gamma:
     print(f'Need {N_traj} to match the empirical gamma!')
