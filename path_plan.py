@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import tqdm
 from scenario_epsilon import eps_general
 from ZigZagPath import ZigZagPath
+from utils import set_cover
 
 
 #######################
@@ -160,12 +161,26 @@ for expm in range(new_experiments):
         # store in a set for uniqueness
         unique_ell_seq.add(ell_seq)
 
+# Set cover problem to find complexity
+subsets = []
+for j in range(all_trajectories.shape[-1]):
+    H_seq = np.squeeze(all_trajectories[:,:,j])
+    seq_of_ell_seq = []
+    for i in range(0,len(H_seq)-ell+1):
+        seq_of_ell_seq.append(tuple(H_seq[i:i+ell]))
+    subsets.append(set(seq_of_ell_seq))
+
+cover = set_cover(unique_ell_seq, subsets)
+print("Complexity (smallest cardinality of subset of H-sequences that return the same solution) ",len(cover))
+
 print(f'Number of unique ell sequences: {len(unique_ell_seq)}')
 print(f'Unique ell sequences: \n{unique_ell_seq}')
 
 print('-'*80)
 epsi_up = eps_general(k=len(unique_ell_seq), N=new_experiments, beta=1e-12)
-print(f'Epsilon Bound: {epsi_up}')
+print(f'Epsilon Bound With Unique l-Sequences: {epsi_up}')
+epsi_up = eps_general(k=len(cover), N=new_experiments, beta=1e-12)
+print(f'Epsilon Bound With Set Cover: {epsi_up}')
 print('-'*80)
 
 
