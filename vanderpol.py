@@ -13,6 +13,7 @@ tmax, dt = 5.8, 0.2
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
 N_traj = 20000
+BETA = 1e-12
 time_steps = round(tmax/dt) + 1
 
 # generates trajectories of the van der pol system
@@ -50,7 +51,7 @@ else:
 
 
 print('-'*80)
-epsi_up = eps_general(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
+epsi_up = eps_general(k=len(ell_seq_trajectory), N=N_traj, beta=BETA)
 print(f'Epsilon Bound: {epsi_up}')
 print('-'*80)
 

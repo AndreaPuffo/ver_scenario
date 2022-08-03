@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import tqdm
 from scenario_epsilon import eps_general
 from ZigZagPath import ZigZagPath
-from utils import set_cover
+from utils import set_cover, plot_border_walls
 
 
 #######################
@@ -22,6 +22,8 @@ actions = ['u', 'd', 'e', 'w']
 Q = np.zeros((10*10 + 1, 4))
 Q[100, :] = -1*np.ones((4,))
 
+print('Start Training Agent')
+
 for i in tqdm.tqdm(range(episodes)):
 
     # initial state
@@ -32,8 +34,8 @@ for i in tqdm.tqdm(range(episodes)):
     zzp = ZigZagPath(x0=x0)
 
     # print sort of training loss
-    if i % (episodes//100) == 0:
-        print(np.sum(Q))
+    # if i % (episodes//100) == 0:
+    #     print(np.sum(Q))
 
     trajectory = []
     iters = 0
@@ -73,15 +75,16 @@ for i in tqdm.tqdm(range(episodes)):
 print('-'*80)
 print('Start Trajectory Sampling')
 new_experiments = 10000
+BETA = 1e-12
 H = 25
 # plot only some trajectories
 plot_thr = 10./new_experiments
 
 # collect all trajectories
-all_trajectories = np.zeros((1, H+1, new_experiments))
+all_trajectories = np.zeros((1, H, new_experiments))
 
 # loop over trajectories
-for i in range(new_experiments):
+for i in tqdm.tqdm(range(new_experiments)):
 
     # initial state
     x0 = np.random.randint(low=0, high=9, size=(2, 1))
@@ -101,25 +104,12 @@ for i in range(new_experiments):
         plot_flag = True
 
     if plot_flag:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        # set a decent grid
-        major_ticks = np.arange(-1, 11, 1)
-        ax.set_xticks(major_ticks)
-        ax.set_yticks(major_ticks)
-        ax.grid(which='both')
-        ax.set_axisbelow(True)
-        # add walls, target and border
-        ax.add_patch(matplotlib.patches.Rectangle(xy=(2.5, -0.5), width=1, height=7, color='red', alpha=0.6))
-        ax.add_patch(matplotlib.patches.Rectangle(xy=(6.5, 3), width=1, height=6.5, color='red', alpha=0.6))
-        ax.add_patch(matplotlib.patches.Rectangle(xy=(7.5, 6.5), width=2, height=3, color='g', alpha=0.7))
-        ax.add_patch(matplotlib.patches.Rectangle(xy=(-0.5, -0.5), width=10, height=10,
-                                                  edgecolor='k', linewidth=2, facecolor='none'))
+        plot_border_walls()
 
     iters = 0
     all_trajectories[0, 0, i] = state[1]*10+state[0]
     # collect H time steps per trajectory
-    while iters < H:
+    while iters < H-1:
 
         if plot_flag:
             plt.scatter(state[0], state[1], c='b')
@@ -171,15 +161,15 @@ for j in range(all_trajectories.shape[-1]):
     subsets.append(set(seq_of_ell_seq))
 
 cover = set_cover(unique_ell_seq, subsets)
-print("Complexity (smallest cardinality of subset of H-sequences that return the same solution) ",len(cover))
+print("Complexity (smallest cardinality of subset of H-sequences that return the same solution): ", len(cover))
 
 print(f'Number of unique ell sequences: {len(unique_ell_seq)}')
 print(f'Unique ell sequences: \n{unique_ell_seq}')
 
 print('-'*80)
-epsi_up = eps_general(k=len(unique_ell_seq), N=new_experiments, beta=1e-12)
+epsi_up = eps_general(k=len(unique_ell_seq), N=new_experiments, beta=BETA)
 print(f'Epsilon Bound With Unique l-Sequences: {epsi_up}')
-epsi_up = eps_general(k=len(cover), N=new_experiments, beta=1e-12)
+epsi_up = eps_general(k=len(cover), N=new_experiments, beta=BETA)
 print(f'Epsilon Bound With Set Cover: {epsi_up}')
 print('-'*80)
 

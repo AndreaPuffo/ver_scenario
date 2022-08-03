@@ -3,6 +3,7 @@ import numpy as np
 import tqdm
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
+import matplotlib.patches
 from matplotlib.patches import Circle
 from scipy.integrate import solve_ivp
 from collections import Counter
@@ -379,6 +380,7 @@ def distribution_subplots(all_trajectory_parts, time_steps, parts_per_axis, n_va
                                                labels,
                                                rotation=rotation_labels)
 
+
 def set_cover(universe, subsets):
     """Find a family of subsets that covers the universal set"""
     elements = set(e for s in subsets for e in s)
@@ -394,4 +396,24 @@ def set_cover(universe, subsets):
         covered |= subset
 
     return cover
+
+def plot_border_walls():
+    """
+    plots the border and the onbstacles for the path planning example
+    :return:
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    # set a decent grid
+    major_ticks = np.arange(-1, 11, 1)
+    ax.set_xticks(major_ticks)
+    ax.set_yticks(major_ticks)
+    ax.grid(which='both')
+    ax.set_axisbelow(True)
+    # add walls, target and border
+    ax.add_patch(matplotlib.patches.Rectangle(xy=(2.5, -0.5), width=1, height=7, color='red', alpha=0.6))
+    ax.add_patch(matplotlib.patches.Rectangle(xy=(6.5, 3), width=1, height=6.5, color='red', alpha=0.6))
+    ax.add_patch(matplotlib.patches.Rectangle(xy=(7.5, 6.5), width=2, height=3, color='g', alpha=0.7))
+    ax.add_patch(matplotlib.patches.Rectangle(xy=(-0.5, -0.5), width=10, height=10,
+                                              edgecolor='k', linewidth=2, facecolor='none'))
 

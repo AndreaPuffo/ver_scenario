@@ -10,6 +10,7 @@ from utils import plot_init_conditions, partitions_sequences, get_sequences_stat
 
 SEED = 5190
 np.random.seed(SEED)
+BETA = 1e-12
 
 # Maximum time, time point spacings and the time grid (all in s).
 tmax, dt = 0.3, 0.1
@@ -39,7 +40,6 @@ parts_y_idx = np.linspace(y_bounds[0], y_bounds[1], parts_per_axis)
 all_trajectory_parts = partitions_sequences(all_positions, [parts_x_idx, parts_y_idx], N_traj,
                                             time_steps, parts_per_axis)
 n_vars = 2
-print(f'Partitions: {all_trajectory_parts}')
 
 # find all ell-sequences from a trajectory
 ell = 2
@@ -72,11 +72,11 @@ else:
     print(f'Same number of seen and initial sequences.')
 
 print('-'*80)
-epsi_up = eps_general(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
+epsi_up = eps_general(k=len(ell_seq_trajectory), N=N_traj, beta=BETA)
 print(rf'Epsilon Bound with All $\ell$-sequences: {epsi_up}')
-epsi_up = eps_general(k=len(cover), N=N_traj, beta=1e-12)
+epsi_up = eps_general(k=len(cover), N=N_traj, beta=BETA)
 print(rf'Epsilon Bound with exact complexity: {epsi_up}')
-epsi_up = eps_general(k=len(ell_seq_init), N=N_traj, beta=1e-12)
+epsi_up = eps_general(k=len(ell_seq_init), N=N_traj, beta=BETA)
 print(rf'Epsilon Bound with Initial $\ell$-sequences: {epsi_up}')
 print('-'*80)
 
@@ -92,7 +92,6 @@ all_positions = generate_traj_doublepend(N_traj, t, time_steps, friction_flag=fr
 all_trajectory_parts = partitions_sequences(all_positions, [parts_x_idx, parts_y_idx], N_traj,
                                             time_steps, parts_per_axis)
 
-print(f'Sequences of partitions: {all_trajectory_parts}')
 # find all ell-sequences from a trajectory
 print(f'Total trajectories: {N_traj}. \nVisitable Partitions: {(parts_per_axis-1)**(n_vars*ell)}. ')
 
@@ -134,10 +133,7 @@ print('Computing N to match gamma with new complexity...')
 while epsi_up > empirical_gamma:
     N_traj = round(1.5*N_traj)
     print(f'Currently at {N_traj}')
-    epsi_up = eps_general(k=len(cover), N=N_traj, beta=1e-12)
-
-if epsi_up <= empirical_gamma:
-    print(f'Need {N_traj} to match the empirical gamma!')
+    epsi_up = eps_general(k=len(cover), N=N_traj, beta=BETA)
 
 if epsi_up <= empirical_gamma:
     print(f'Need {N_traj} to match the empirical gamma!')
