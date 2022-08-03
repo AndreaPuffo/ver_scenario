@@ -132,7 +132,7 @@ for ell_seq in only_new_sequences:
 # find N to match the empirical gamma
 print('Computing N to match gamma with new complexity...')
 while epsi_up > empirical_gamma:
-    N_traj = 1.5*N_traj
+    N_traj = round(1.5*N_traj)
     print(f'Currently at {N_traj}')
     epsi_up = eps_general(k=len(cover), N=N_traj, beta=1e-12)
 
