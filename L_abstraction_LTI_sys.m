@@ -2,15 +2,19 @@ clear all
 close all
 
 A = [1,2;-1,1]/3;
-l = 20;
+l = 4;
+alfa = norm(A,2);
+sprintf('|A|_2 = %.3f', alfa);
 
 %% Partition state space
-part_num_x = 4;
-part_num_y = 3;
+part_num_x = 10;
+part_num_y = 10;
 tot_init_part = (part_num_x-1)*(part_num_y-1);
 
 Ix = [-1,1];
 Iy = [-1,1];
+d_max = Ix(2);
+d_min = (Ix(2)-Ix(1))/(part_num_x-1)/2;
 
 [Px,Py] = meshgrid(linspace(Ix(1), Ix(2), part_num_x), linspace(Iy(1), Iy(2), part_num_y));
 
@@ -91,8 +95,8 @@ for v = 1 : l-1
     axis equal
 end
 
-%% Follow One set
-l_partition = '8-7-12-12-13';
+%% Follow one set forward
+l_partition = '1-5-5-5-2-2-2-2';
 
 for q = 1 : length_P_seq
     if strcmp(P_seq{q}{2},l_partition)
@@ -116,15 +120,95 @@ end
 
 mypoly = P_seq{q}{1};
 trajectory = zeros(2,l);
+area_poly = zeros(1,l);
 
 plot(mypoly)
 [xc,yx] = centroid(mypoly);
 trajectory(:,1) = [xc;yx];
+init_area = area(mypoly);
+area_poly(1) = area(mypoly)/init_area; 
 for u = 2 : l
     mypoly.Vertices = (A*mypoly.Vertices')';
     [xc,yx] = centroid(mypoly);
     trajectory(:,u) = [xc;yx];
+    area_poly(u) = area(mypoly)/init_area; 
     plot(mypoly)
 end
 plot(trajectory(1,:),trajectory(2,:), 'Color', 'red')
 title(P_seq{q}{2})
+figure
+plot(area_poly)
+title("Area l-partition")
+%% Follow sets backwards
+figure
+
+H = ceil(log(d_min/d_max)/log(alfa));
+Pre_diff_measure_traj = zeros(length_P_seq,H-1);
+Union_measure_traj = zeros(length_P_seq,H);
+Pre_measure_traj = zeros(length_P_seq,H);
+
+k = linspace(0,H-1,H);
+
+center = [0;0];
+length = 2;
+vertices = [center+1/2*length,center-1/2*length*[1;-1],center-1/2*length,center-1/2*length*[-1;1]];
+mypoly = polyshape(vertices');
+S_0 = cell(1,2);
+index_0 = 0;
+for i = 1 : length_P_seq
+    if isinterior(P_seq{i}{1},0,0)
+        index_0 = i;
+        S_0 = P_seq{i};
+    end
+    set = P_seq{i}{1};
+    union_set = set;
+    union_set_l_seq = cell(H,1);
+    set_l_seq = cell(H-1,1);
+    for j = 1 : H
+        Pre_measure_traj(i,j) = area(intersect(set,mypoly));
+        Union_measure_traj(i,j) = area(union_set);
+        set.Vertices = (A^(-1)*set.Vertices')';
+        union_set = union(intersect(set,mypoly),union_set);
+        union_set_l_seq{j} = P_seq{i}{2};
+    end
+    mu_inf = Union_measure_traj(i,H);
+    Union_measure_traj(i,:) = Union_measure_traj(i,:)/mu_inf;
+    Pre_measure_traj(i,:) = Pre_measure_traj(i,:)/mu_inf;
+    Pre_diff_measure_traj(i,:) = diff(Union_measure_traj(i,:));
+    % used to create the plot curve label
+    for j = 1 : H-1        
+        set_l_seq{j} = union_set_l_seq{j};
+    end
+    subplot(3,1,1)
+    s = plot(k,Union_measure_traj(i,:));
+    row = dataTipTextRow('l-seq',union_set_l_seq);
+    s.DataTipTemplate.DataTipRows(end+1) = row;
+    hold on
+    subplot(3,1,2)
+    s = plot(k,Pre_measure_traj(i,:));
+    row = dataTipTextRow('l-seq',union_set_l_seq);
+    s.DataTipTemplate.DataTipRows(end+1) = row;
+    hold on
+    subplot(3,1,3)
+    s = plot(k(1:end-1),Pre_diff_measure_traj(i,:));
+    row = dataTipTextRow('l-seq',set_l_seq);
+    s.DataTipTemplate.DataTipRows(end+1) = row;
+    hold on
+end
+
+subplot(3,1,1)
+h = title('$\mu(\mathcal{D}\bigcap\bigcup_{i=0}^{H-1} Pre^i(S))/\mu_0^{\infty}(S)$','interpreter', 'latex');
+h.FontSize = 15;
+subplot(3,1,2)
+h = title('$\mu(\mathcal{D}\bigcap Pre^i(S))/\mu_0^{\infty}(S)$','interpreter', 'latex');
+h.FontSize = 15;
+subplot(3,1,3)
+h = title('$\mu(\mathcal{D}\bigcap Pre^{i+1}(S)\setminus Pre^i(S))/\mu_0^{\infty}(S)$','interpreter', 'latex');
+h.FontSize = 15;
+
+%% Lower bounding function
+
+rho = abs(det(A)); %Choose
+f = (1 - rho.^(-1))./(1-rho.^(k-H));
+subplot(3,1,1)
+plot(f,'Color','black','LineStyle','-.');
