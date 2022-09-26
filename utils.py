@@ -207,6 +207,26 @@ def partitions_1D(all_positions, boundaries, N_traj, time_steps):
 
     return all_trajectory_parts
 
+def partitions_grid(all_positions, boundaries, N_traj, time_steps):
+
+    parts_x_idx, parts_y_idx = boundaries
+
+    all_trajectory_parts = np.zeros((N_traj, time_steps))
+    # find partitions of the trajectory
+    for j in tqdm.tqdm(range(N_traj)):
+
+        trajectory = all_positions[j, :, :]
+
+        for i in range(0, trajectory.shape[0]):
+            x_part = np.where( (trajectory[i, 0] < parts_x_idx) == 0)[0][-1]
+            y_part = np.where((trajectory[i, 1] < parts_y_idx) == 0)[0][-1]
+            all_trajectory_parts[j, i] = y_part*(len(parts_x_idx)) + x_part
+
+    # check if partitions do their job
+    assert (all_trajectory_parts >= 0).all()
+
+    return all_trajectory_parts
+
 
 def partitions_sequences_theta(all_positions, boundaries, N_traj, time_steps, parts_per_axis):
 
