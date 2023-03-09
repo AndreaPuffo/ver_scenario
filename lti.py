@@ -5,7 +5,7 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from utils import plot_init_conditions, partitions_grid, get_sequences_stats, \
-    distribution_subplots, generate_vanderpol_traj
+    distribution_subplots, generate_vanderpol_traj, set_cover
 from scenario_epsilon import eps_general
 
 
@@ -33,7 +33,7 @@ print(f'Model Eigenvalues: {eigs}, contraction rate: {contraction}')
 
 
 # Maximum time, time point spacings and the time grid (all in s).
-tmax, dt = 3, 1
+tmax, dt = 20, 1
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
 N_traj = 10000
@@ -49,7 +49,7 @@ for i in tqdm.tqdm(range(N_traj)):
 # boundaries for system are [0,1]
 x_bounds = domain_bounds
 y_bounds = domain_bounds
-n_partitions = 9
+n_partitions = 31
 parts_x_idx = np.linspace(x_bounds[0], x_bounds[1], n_partitions+1)
 parts_y_idx = np.linspace(y_bounds[0], y_bounds[1], n_partitions+1)
 boundaries = [parts_x_idx, parts_y_idx]
@@ -61,7 +61,7 @@ all_trajectory_parts = partitions_grid(all_positions, boundaries, N_traj, time_s
 print(f'Partitions: {all_trajectory_parts}')
 
 # find all ell-sequences from a trajectory
-ell = 2
+ell = 5
 
 assert ell <= time_steps
 
@@ -81,10 +81,24 @@ else:
     print(f'Same number of seen and initial sequences: ({len(ell_seq_init)}).')
 
 
+subsets = []
+for H_seq in all_trajectory_parts:
+    seq_of_ell_seq = []
+    for i in range(0,len(H_seq)-ell+1):
+        seq_of_ell_seq.append(tuple(H_seq[i:i+ell]))
+    subsets.append(set(seq_of_ell_seq))
+
+cover = set_cover(ell_seq_trajectory, subsets)
+print("Upper bound of complexity ", len(cover))
+
 print('-'*80)
 epsi_up = eps_general(k=len(ell_seq_trajectory), N=N_traj, beta=1e-12)
-print(f'Epsilon Bound: {epsi_up}')
+print(f'Epsilon Bound, based on unique ell-sequences: {epsi_up}')
 print('-'*80)
+epsi_up = eps_general(k=len(cover), N=N_traj, beta=1e-12)
+print(f'Epsilon Bound improved, using complexity: {epsi_up}')
+print('-'*80)
+
 
 ###################################
 #  infinite horizon

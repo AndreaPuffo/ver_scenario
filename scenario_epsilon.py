@@ -61,7 +61,7 @@ def eps_general(k, N, beta):
     1 - beta/N * (N k)**(-1) * sum_{i=k}^{N-1} (i k) * t**(i-N) = 0
 
     """
-    print(k)
+    #print(k)
     n_over_k_minus_one = dc(scipy.special.comb(N, k, exact=True)) ** -1
 
     i_over_k = np.empty((N-k, ), dtype=np.object)
