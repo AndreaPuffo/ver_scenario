@@ -26,6 +26,8 @@ A = 1./3. * np.array([
         [-1., 1.]
     ])
 
+
+
 eigs = np.linalg.eigvals(A)
 norm_eigs = np.absolute(eigs)
 contraction = np.max(norm_eigs)
@@ -33,7 +35,7 @@ print(f'Model Eigenvalues: {eigs}, contraction rate: {contraction}')
 
 
 # Maximum time, time point spacings and the time grid (all in s).
-tmax, dt = 20, 1
+tmax, dt = 10, 1
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
 N_traj = 10000
@@ -49,7 +51,7 @@ for i in tqdm.tqdm(range(N_traj)):
 # boundaries for system are [0,1]
 x_bounds = domain_bounds
 y_bounds = domain_bounds
-n_partitions = 31
+n_partitions = 17
 parts_x_idx = np.linspace(x_bounds[0], x_bounds[1], n_partitions+1)
 parts_y_idx = np.linspace(y_bounds[0], y_bounds[1], n_partitions+1)
 boundaries = [parts_x_idx, parts_y_idx]
@@ -109,10 +111,20 @@ print('-'*80)
 idx = np.where(parts_x_idx > 0)[0][0]
 start = parts_x_idx[idx]
 
-H = 1
-while start < x_bounds[1]:
-    H = H+1
-    start = start * contraction**-1
+
+# Compute the induced 2-norm of matrix A
+alfa = np.linalg.norm(A, ord=2)
+# Compute d_min and d_max for the computation of \bar{k}
+d_max = 0
+if x_bounds == y_bounds and np.abs(x_bounds[0]) == x_bounds[1]:
+    d_max = x_bounds[1]
+else:
+    print("Adjust bounds (or code)!")
+# Compute the size of the interval of parts_x_idx
+d_min = (parts_x_idx[1] - parts_x_idx[0])/2
+
+H = np.ceil(np.log(d_min/d_max)/np.log(alfa));
+print(f'Number of steps to exit the domain: {H}')
 
 k = np.minimum(time_steps, H)
 gamma_bar = ( (1 - contraction**(k-H-1)) / (1 - contraction**-1) ) * epsi_up
