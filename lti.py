@@ -35,10 +35,10 @@ print(f'Model Eigenvalues: {eigs}, contraction rate: {contraction}')
 
 
 # Maximum time, time point spacings and the time grid (all in s).
-tmax, dt = 9, 1
+tmax, dt = 7, 1
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
-N_traj = 10000
+N_traj = 100000
 H = tmax + 1
 n_vars = 2
 
@@ -51,7 +51,7 @@ for i in tqdm.tqdm(range(N_traj)):
 # boundaries for system are [0,1]
 x_bounds = domain_bounds
 y_bounds = domain_bounds
-n_partitions = 14
+n_partitions = 8
 parts_x_idx = np.linspace(x_bounds[0], x_bounds[1], n_partitions+1)
 parts_y_idx = np.linspace(y_bounds[0], y_bounds[1], n_partitions+1)
 boundaries = [parts_x_idx, parts_y_idx]
@@ -63,7 +63,7 @@ all_trajectory_parts = partitions_grid(all_positions, boundaries, N_traj, H)
 print(f'Partitions: {all_trajectory_parts}')
 
 # find all ell-sequences from a trajectory
-ell = 2
+ell = 3
 
 assert ell <= H
 
