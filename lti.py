@@ -35,41 +35,41 @@ print(f'Model Eigenvalues: {eigs}, contraction rate: {contraction}')
 
 
 # Maximum time, time point spacings and the time grid (all in s).
-tmax, dt = 10, 1
+tmax, dt = 9, 1
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
 N_traj = 10000
-time_steps = tmax + 1
+H = tmax + 1
 n_vars = 2
 
 domain_bounds = [-1., 1.]
-all_positions = np.zeros((N_traj, time_steps, n_vars))
+all_positions = np.zeros((N_traj, H, n_vars))
 for i in tqdm.tqdm(range(N_traj)):
     x0 = np.random.uniform(low=domain_bounds[0], high=domain_bounds[1], size=(n_vars,))
-    all_positions[i, :] = contractive_system(A, x0, time_steps)
+    all_positions[i, :] = contractive_system(A, x0, H)
 
 # boundaries for system are [0,1]
 x_bounds = domain_bounds
 y_bounds = domain_bounds
-n_partitions = 17
+n_partitions = 14
 parts_x_idx = np.linspace(x_bounds[0], x_bounds[1], n_partitions+1)
 parts_y_idx = np.linspace(y_bounds[0], y_bounds[1], n_partitions+1)
 boundaries = [parts_x_idx, parts_y_idx]
 
 parts_per_axis = len(parts_x_idx)-1
 
-all_trajectory_parts = partitions_grid(all_positions, boundaries, N_traj, time_steps)
+all_trajectory_parts = partitions_grid(all_positions, boundaries, N_traj, H)
 
 print(f'Partitions: {all_trajectory_parts}')
 
 # find all ell-sequences from a trajectory
-ell = 5
+ell = 2
 
-assert ell <= time_steps
+assert ell <= H
 
 print(f'Total trajectories: {N_traj}. \nVisitable ell-sequences: {(parts_per_axis)**(n_vars*ell)}. ')
 
-ell_seq_trajectory, ell_seq_init, ell_seq_rnd = get_sequences_stats(all_trajectory_parts, ell, time_steps)
+ell_seq_trajectory, ell_seq_init, ell_seq_rnd = get_sequences_stats(all_trajectory_parts, ell, H)
 
 if len(ell_seq_trajectory) > len(ell_seq_init) and len(ell_seq_trajectory) > len(ell_seq_rnd):
     print(f'Visited ell-sequences are more than the initial ones: \n'
@@ -106,12 +106,14 @@ print('-'*80)
 #  infinite horizon
 ###################################
 
-# find H as the number of steps to exit the domain
+# find k_bar as the number of steps to exit the domain
 # not really accurate, but works
 idx = np.where(parts_x_idx > 0)[0][0]
 start = parts_x_idx[idx]
 
-
+# Compute inverse determinant
+rho = np.abs(np.linalg.det(A))**(-1)
+print(rho)
 # Compute the induced 2-norm of matrix A
 alfa = np.linalg.norm(A, ord=2)
 # Compute d_min and d_max for the computation of \bar{k}
@@ -123,14 +125,24 @@ else:
 # Compute the size of the interval of parts_x_idx
 d_min = (parts_x_idx[1] - parts_x_idx[0])/2
 
-H = np.ceil(np.log(d_min/d_max)/np.log(alfa));
-print(f'Number of steps to exit the domain: {H}')
+k_bar = np.ceil(np.log(d_min / d_max) / np.log(alfa))
+print(f'Number of steps to exit the domain: {k_bar}')
 
-k = np.minimum(time_steps, H)
-gamma_bar = ( (1 - contraction**(k-H-1)) / (1 - contraction**-1) ) * epsi_up
-
+phi = np.arange(0, k_bar+1)
+for i in range(0, len(phi)):
+    z = np.ceil((k_bar+1)/(i + 1))-1
+    phi[i] = 1
+    t = 0
+    while t <= z-1:
+        phi[i] += rho**(k_bar-t*(i+1) - i)
+        t = t + 1
+    phi[i] = 1/phi[i]
+#plt.plot(phi)
+print(f'H-ell: {H-ell}')
+print(f'phi[H-ell]: {phi[H-ell]}')
+gamma_bar = epsi_up/phi[H-ell]
 print(f'Infinite Horizon PAC bounds: {gamma_bar}')
-
+exit()
 #################################
 # new data
 #################################
@@ -138,20 +150,20 @@ tmax = 10
 N_traj = 100000
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
-time_steps = tmax + 1
-all_positions = np.zeros((N_traj, time_steps, n_vars))
+H = tmax + 1
+all_positions = np.zeros((N_traj, H, n_vars))
 for i in range(N_traj):
     x0 = np.random.uniform(low=domain_bounds[0], high=domain_bounds[1], size=(n_vars,))
-    all_positions[i, :] = contractive_system(A, x0, time_steps)
+    all_positions[i, :] = contractive_system(A, x0, H)
 
 # sequences of partitions
-all_trajectory_parts = partitions_grid(all_positions, boundaries, N_traj, time_steps)
+all_trajectory_parts = partitions_grid(all_positions, boundaries, N_traj, H)
 
 # print(f'Sequences of partitions: {all_trajectory_parts}')
 # find all ell-sequences from a trajectory
 print(f'Total trajectories: {N_traj}. \nVisitable Partitions: {(parts_per_axis)**(n_vars*ell)}. ')
 
-new_ell_seq_trajectory, new_ell_seq_init, new_ell_seq_rnd = get_sequences_stats(all_trajectory_parts, ell, time_steps)
+new_ell_seq_trajectory, new_ell_seq_init, new_ell_seq_rnd = get_sequences_stats(all_trajectory_parts, ell, H)
 
 tot_ell_visited = ell_seq_trajectory.union(new_ell_seq_trajectory)
 tot_init_visited = ell_seq_init.union(new_ell_seq_init)
@@ -164,7 +176,7 @@ print(f'New random seen: {len(tot_rnd_visited)-len(ell_seq_rnd)}')
 print(f'Old sequences: {ell_seq_trajectory}')
 print(f'New sequences: {tot_ell_visited}')
 
-distribution_subplots(all_trajectory_parts, time_steps=6+ell,  # time_steps,
+distribution_subplots(all_trajectory_parts, time_steps=6+ell,  # H,
                       parts_per_axis=parts_per_axis+1, n_vars=n_vars, plot_every=1, ell=ell)
 
 
