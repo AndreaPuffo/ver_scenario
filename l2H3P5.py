@@ -31,7 +31,7 @@ for i in range(1,M+1):
         violation = 0
         violating_short_strings = []
         violating_long_strings = []
-        ### Find l-sequences not present in the N H-sequences
+        ### Find l-sequences not present in the N k_bar-sequences
         for z in u:
             ### Flag = 0 if the l-sequences is missing
             flag = 0
@@ -40,14 +40,14 @@ for i in range(1,M+1):
                     flag = 1
                     break
             if flag == 0:
-                ### Find H-sequences that contain the l-sequence
+                ### Find k_bar-sequences that contain the l-sequence
                 for y in v:
                     if z in y[0]:
-                        ### To prevent counting duplicate H-sequences
+                        ### To prevent counting duplicate k_bar-sequences
                         if y not in violating_long_strings:
                             violating_long_strings.append(y)
                             violation += y[1]
-        ### Probability of seeing all the possible N long outcomes with sequences made up of any combination of the chosen H-sequences
+        ### Probability of seeing all the possible N long outcomes with sequences made up of any combination of the chosen k_bar-sequences
         outcome_probability = np.power((P_chosen), N)
         Pmf_exact_symbols[chosen] = outcome_probability
         ### Subtract repeated outcomes to obtain all sequences that contain at least one element of each chosen ones
