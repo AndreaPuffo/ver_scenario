@@ -127,7 +127,7 @@ d_min = (parts_x_idx[1] - parts_x_idx[0])/2
 
 k_bar = np.ceil(np.log(d_min / d_max) / np.log(alfa))
 print(f'Number of steps to exit the domain: {k_bar}')
-
+assert k_bar >= (H-ell)
 phi = np.arange(0, k_bar+1)
 for i in range(0, len(phi)):
     z = np.ceil((k_bar+1)/(i + 1))-1
