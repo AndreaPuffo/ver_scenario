@@ -6,10 +6,10 @@ import scipy.io
 from tqdm import tqdm
 from multiprocessing import Pool
 
-# Load the measure (probability) of the events, such as the measure of the H-sequences' equivalence classes
+# Load the measure (probability) of the events, such as the measure of the k_bar-sequences' equivalence classes
 ell_seq_measure = scipy.io.loadmat(
     './data/H_sequences_measure.mat')
-# Load the label associated to the measure of the H-sequences
+# Load the label associated to the measure of the k_bar-sequences
 u = []
 with open('./data/H_sequences.txt') as f:
     for line in f:
@@ -48,10 +48,10 @@ def compute_violation(chosen, V_support, Pmf_V, Pmf_exact_symbols, Pmf_seen):
     P_chosen = sum([v[q][1] for q in chosen])
     chosen_H_sequences = [v[q][0] for q in chosen]
     violation = 0
-    # Find l-sequences not present in the N H-sequences
+    # Find l-sequences not present in the N k_bar-sequences
     unseen_ell_sequences = u.copy()
     violating_H_sequences = [v[q] for q in range(M) if q not in chosen]
-    # Split H-sequences in l-sequences
+    # Split k_bar-sequences in l-sequences
     for H_sequence in chosen_H_sequences:
         for c in range(H - l):
             ell_sequence = H_sequence[2 * c: 2 * c + 2 * (l - 1) + 1]

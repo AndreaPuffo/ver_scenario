@@ -122,7 +122,7 @@ print(f'New random seen: {len(tot_rnd_visited)-len(ell_seq_rnd)}')
 print(f'Old sequences: {ell_seq_trajectory}')
 print(f'New sequences: {tot_ell_visited}')
 
-distribution_subplots(all_trajectory_parts, time_steps=6+ell,  # time_steps,
+distribution_subplots(all_trajectory_parts, time_steps=6+ell,  # H,
                       parts_per_axis=parts_per_axis+1, n_vars=n_vars, plot_every=1, ell=ell)
 
 

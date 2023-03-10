@@ -108,7 +108,7 @@ for i in tqdm.tqdm(range(new_experiments)):
 
     iters = 0
     all_trajectories[0, 0, i] = state[1]*10+state[0]
-    # collect H time steps per trajectory
+    # collect k_bar time steps per trajectory
     while iters < H-1:
 
         if plot_flag:
@@ -161,7 +161,7 @@ for j in range(all_trajectories.shape[-1]):
     subsets.append(set(seq_of_ell_seq))
 
 cover = set_cover(unique_ell_seq, subsets)
-print("Complexity (smallest cardinality of subset of H-sequences that return the same solution): ", len(cover))
+print("Complexity (smallest cardinality of subset of k_bar-sequences that return the same solution): ", len(cover))
 
 print(f'Number of unique ell sequences: {len(unique_ell_seq)}')
 print(f'Unique ell sequences: \n{unique_ell_seq}')

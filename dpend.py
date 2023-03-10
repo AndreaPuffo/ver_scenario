@@ -23,7 +23,7 @@ friction = False
 all_positions = generate_traj_doublepend(N_traj, t, time_steps, friction_flag=friction)
 
 if N_traj <= 1000:
-    # for t in range(time_steps//10):
+    # for t in range(H//10):
     fig = plt.figure(figsize=(8.3333, 6.25), dpi=72)
     ax = fig.add_subplot(111)
     plot_init_conditions(all_positions, ax)
