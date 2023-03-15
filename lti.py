@@ -52,7 +52,7 @@ for i in tqdm.tqdm(range(N_traj)):
 # boundaries for system are [0,1]
 x_bounds = domain_bounds
 y_bounds = domain_bounds
-n_partitions = 10-1
+n_partitions = 82-1
 parts_x_idx = np.linspace(x_bounds[0], x_bounds[1], n_partitions+1)
 parts_y_idx = np.linspace(y_bounds[0], y_bounds[1], n_partitions+1)
 boundaries = [parts_x_idx, parts_y_idx]
@@ -187,11 +187,74 @@ print(f'Infinite Horizon PAC bounds: {gamma_bar}')
 # Domino Completion
 #################################
 
-# Check if the first n-1 entries of every element in ell_seq_trajectory concide with the last n-1 entries of any other element
-# If so, then the domino is complete
-# If not, then the domino is incomplete
+# Domino Minimal completion
+# Check if the first ell-1 entries of every element in ell_seq_trajectory concide with the last ell-1 entries of any other element
+# If not, then check if the first ell-2 entries of every element in ell_seq_trajectory concide with the last ell-2 entries of any other element
 #ell = 3
 #ell_seq_trajectory = set([(1,1,1),(1,2,3),(2,3,1),(2,2,2)])
+#ell_seq_trajectory = set([(1,1,1,1,2), (2,1,1,1,1)])
+print(f'Number of unique ell-sequences before domino completion: {len(ell_seq_trajectory)}')
+tic = time.perf_counter()
+missing = None
+flag_missing = 0
+ell_seq_trajectory = np.array(list(l_seq for l_seq in ell_seq_trajectory), dtype=int)
+u = 1
+tic = time.perf_counter()
+while True:
+    L = len(ell_seq_trajectory)
+    prefixes = np.empty((L,ell-1), dtype=int)
+    suffixes = np.empty((L,ell-1), dtype=int)
+    # Get prefixes and suffixes
+    for i in range(L):
+        prefixes[i] = ell_seq_trajectory[i][0:ell-1]
+        suffixes[i] = ell_seq_trajectory[i][-ell+1:]
+    # Check if any suffix is missing in the prefix
+    for i in range(L):
+        # Select l-sequence to be completed
+        if not np.all(suffixes[i] == prefixes, axis=1).any():
+            missing = ell_seq_trajectory[i]
+            flag_missing = 1
+            break
+        else:
+            flag_missing = 0
+    #print("Missing ", missing)
+    concatenated_sequence = None
+    # Minimal completion
+    if flag_missing == 1:
+        for l in reversed(range(1, ell-1)):
+            for i in range(L):
+                if np.array_equal(missing[-l:], prefixes[i][0:l]):
+                    #print(ell_seq_trajectory[i])
+                    concatenated_sequence = np.concatenate((missing, ell_seq_trajectory[i][l:]))
+                    #print(concatenated_sequence)
+                    break
+            if concatenated_sequence is not None:
+                break
+        # No minimal completion found
+        if concatenated_sequence is None:
+            print("No minimal completion found, Error!")
+            assert concatenated_sequence is not None
+            break
+        # Obtain every subsequence of length ell from concatenated_sequence except the last one and first one
+        for i in range(len(concatenated_sequence)-ell-1):
+            ell_seq_trajectory = np.append(ell_seq_trajectory, [concatenated_sequence[1+i:1+i+ell]], axis=0)
+        #print("All ell-seq:", ell_seq_trajectory)
+    else:
+        break
+    # Check if the first ell-1 entries of every element in ell_seq_trajectory concide with the last ell-1 entries of any other element
+    if L/u > 10000:
+        toc = time.perf_counter()
+        print(f'Elapsed time: {toc-tic:0.4f} seconds')
+        print(f'Number of unique ell-sequences after domino completion: {L}')
+        u = u + 1
+        tic = toc
+toc = time.perf_counter()
+print(f'Elapsed time: {toc-tic:0.4f} seconds')
+print(f'Number of unique ell-sequences after domino completion: {len(ell_seq_trajectory)}')
+
+# Double check that set is domino complete
+
+ell_seq_trajectory = set(tuple(s) for s in ell_seq_trajectory)
 
 print(f'Number of unique ell-sequences before domino completion: {len(ell_seq_trajectory)}')
 tic = time.perf_counter()
@@ -232,6 +295,7 @@ print(f'Number of unique ell-sequences after domino completion: {len(ell_seq_tra
 #################################
 # new data
 #################################
+
 tmax = 8
 N_traj = 100000
 t = np.arange(0, tmax+dt, dt)
@@ -261,7 +325,7 @@ for H_seq in subsets:
     if not H_seq.issubset(ell_seq_trajectory):
         N_Viol += 1
 
-print(f'Percentage of trajectories violating the PAC bound: {N_Viol/N_traj*100}%')
+print(f'Percentage of trajectories violating the solution: {N_Viol/N_traj*100}%')
 '''
 new_ell_seq_trajectory, new_ell_seq_init, new_ell_seq_rnd = get_sequences_stats(all_trajectory_parts, ell, H)
 
