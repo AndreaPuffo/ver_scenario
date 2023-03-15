@@ -1,4 +1,6 @@
 import sys
+import time
+
 import numpy as np
 import tqdm
 from scipy.integrate import odeint
@@ -6,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches
 from matplotlib.patches import Circle
 from scipy.integrate import solve_ivp
+import heapq
 from collections import Counter
 
 
@@ -220,7 +223,7 @@ def partitions_grid(all_positions, boundaries, N_traj, time_steps):
         for i in range(0, trajectory.shape[0]):
             x_part = np.where( (trajectory[i, 0] < parts_x_idx) == 0)[0][-1]
             y_part = np.where((trajectory[i, 1] < parts_y_idx) == 0)[0][-1]
-            all_trajectory_parts[j, i] = y_part*(len(parts_x_idx)) + x_part
+            all_trajectory_parts[j, i] = y_part*(len(parts_x_idx)-1) + x_part + 1
 
     # check if partitions do their job
     assert (all_trajectory_parts >= 0).all()
@@ -409,13 +412,95 @@ def set_cover(universe, subsets):
         return None
     covered = set()
     cover = []
+    u = 1
+    num_sets = 0
     # Greedily add the subsets with the most uncovered points
     while covered != elements:
-        subset = max(subsets, key=lambda s: len(s - covered))
-        cover.append(subset)
+        max_len = 0
+        subset = set()
+        copy_of_subsets = subsets.copy()
+        for s in subsets:
+            if len(s - covered) > max_len:
+                max_len = len(s - covered)
+                subset = s
+            elif len(s - covered) == 0:
+                copy_of_subsets.remove(s)
+        subsets = copy_of_subsets.copy()
+        #subset = max(subsets, key=lambda s: len(s - covered))
+        #cover.append(subset)
+        num_sets += 1
         covered |= subset
+        subsets.remove(subset)
+        # Print missing number of elements if it is a multiple of 1000
+        if (len(covered) / (u*2000)) > 1:
+            # Print percentage of covered elements
+            print(f'{len(covered)/len(elements)*100:.2f}% ({len(covered)}/{len(elements)})')
+            print(f'Number of subsets: {len(subsets)}')
+            u += 1
 
-    return cover
+    return num_sets
+
+
+
+
+# replace greedy_set_cover
+#@timer
+def greedy_set_cover(subsets, parent_set):
+    #parent_set = set(e for s in parent_set for e in s)
+    max = len(parent_set)
+    # create the initial heap. Note 'subsets' can be unsorted,
+    # so this is independent of whether remove_redunant_subsets is used.
+    heap = []
+    for s in subsets:
+        # Python's heapq lets you pop the *smallest* value, so we
+        # want to use max-len(s) as a score, not len(s).
+        # len(heap) is just proving a unique number to each subset,
+        # used to tiebreak equal scores.
+        heapq.heappush(heap, [max-len(s), len(heap), s])
+    #results = []
+    result_set = set()
+    num_sets = 0
+    u = 1
+    tic = time.perf_counter()
+    while result_set < parent_set:
+        #logging.debug('len of result_set is {0}'.format(len(result_set)))
+        best = []
+        unused = []
+        while heap:
+            score, count, s = heapq.heappop(heap)
+            if not best:
+                best = [max-len(s - result_set), count, s]
+                continue
+            if score >= best[0]:
+                # because subset scores only get worse as the resultset
+                # gets bigger, we know that the rest of the heap cannot beat
+                # the best score. So push the subset back on the heap, and
+                # stop this iteration.
+                heapq.heappush(heap, [score, count, s])
+                break
+            score = max-len(s - result_set)
+            if score >= best[0]:
+                unused.append([score, count, s])
+            else:
+                unused.append(best)
+                best = [score, count, s]
+        add_set = best[2]
+        #logging.debug('len of add_set is {0} score was {1}'.format(len(add_set), best[0]))
+        #results.append(add_set)
+        result_set.update(add_set)
+        num_sets += 1
+        # subsets that were not the best get put back on the heap for next time.
+        while unused:
+            heapq.heappush(heap, unused.pop())
+        if (len(result_set) / (u*2000)) > 1:
+            toc = time.perf_counter()
+            # Print percentage of covered elements
+            print(f'{len(result_set)/len(parent_set)*100:.2f}%')
+            u += 1
+            print(f'Elapsed time: {toc - tic:0.4f} seconds')
+            tic = toc
+    return num_sets
+
 
 def plot_border_walls():
     """
