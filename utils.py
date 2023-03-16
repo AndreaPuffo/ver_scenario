@@ -9,6 +9,7 @@ import matplotlib.patches
 from matplotlib.patches import Circle
 from scipy.integrate import solve_ivp
 import heapq
+from multiprocessing import Process, Value, Array
 from collections import Counter
 
 
@@ -501,6 +502,26 @@ def greedy_set_cover(subsets, parent_set):
             tic = toc
     return num_sets
 
+
+import numpy as np
+from multiprocessing import Process, Value, Array
+
+
+def match_rows(x, y, n, start_idx, end_idx, result_queue):
+    """
+    This function searches for a matching row in y that
+    matches the last n entries of x, starting from start_idx
+    and ending at end_idx. If a match is found, the function
+    puts the matching row in the result_queue and returns.
+    If no match is found, the function returns without putting
+    anything in the result_queue.
+    """
+    found = False
+    for i in range(start_idx, end_idx):
+        if np.array_equal(y[i][0:n], x[-n:]):
+            result_queue.put(y[i])
+            found
+            return
 
 def plot_border_walls():
     """

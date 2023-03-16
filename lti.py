@@ -6,8 +6,11 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from utils import plot_init_conditions, partitions_grid, get_sequences_stats, \
-    distribution_subplots, generate_vanderpol_traj, set_cover, greedy_set_cover
+    distribution_subplots, generate_vanderpol_traj, set_cover, greedy_set_cover, \
+    match_rows
 from scenario_epsilon import eps_general
+import multiprocessing as mp
+
 
 
 def contractive_system(A, x0, N_steps):
@@ -39,7 +42,7 @@ print(f'Model Eigenvalues: {eigs}, contraction rate: {contraction}')
 tmax, dt = 8, 1
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
-N_traj = 100000
+N_traj = 1000000
 H = tmax + 1
 n_vars = 2
 
@@ -69,7 +72,7 @@ all_trajectory_parts = partitions_grid(all_positions, boundaries, N_traj, H)
 print(f'Partitions: {all_trajectory_parts}')
 
 # find all ell-sequences from a trajectory
-ell = 3
+ell = H
 
 assert ell <= H
 
@@ -88,20 +91,22 @@ elif len(ell_seq_trajectory) == len(ell_seq_rnd) and len(ell_seq_trajectory) > l
 else:
     print(f'Same number of seen and initial sequences: ({len(ell_seq_init)}).')
 
+num_sets = 0
+if ell < H:
+    # Recast for set cover problem
+    subsets = []
+    for H_seq in all_trajectory_parts:
+        seq_of_ell_seq = []
+        for i in range(0, len(H_seq)-ell+1):
+            seq_of_ell_seq.append(tuple(H_seq[i:i+ell]))
+        subsets.append(set(seq_of_ell_seq))
+    tic = time.perf_counter()
+    num_sets = greedy_set_cover(subsets,ell_seq_trajectory)
+    toc = time.perf_counter()
+    print(f"Time elapsed: {toc - tic:0.4f} seconds")
+else:
+    num_sets = len(ell_seq_trajectory)
 
-
-# Recast for set cover problem
-subsets = []
-for H_seq in all_trajectory_parts:
-    seq_of_ell_seq = []
-    for i in range(0, len(H_seq)-ell+1):
-        seq_of_ell_seq.append(tuple(H_seq[i:i+ell]))
-    subsets.append(set(seq_of_ell_seq))
-tic = time.perf_counter()
-num_sets = greedy_set_cover(subsets,ell_seq_trajectory)
-toc = time.perf_counter()
-print(f"Time elapsed: {toc - tic:0.4f} seconds")
-print(num_sets)
 
 print("Upper bound of complexity ", num_sets)
 
@@ -190,79 +195,208 @@ print(f'Infinite Horizon PAC bounds: {gamma_bar}')
 # Domino Minimal completion
 # Check if the first ell-1 entries of every element in ell_seq_trajectory concide with the last ell-1 entries of any other element
 # If not, then check if the first ell-2 entries of every element in ell_seq_trajectory concide with the last ell-2 entries of any other element
-#ell = 3
+#ell = 5
 #ell_seq_trajectory = set([(1,1,1),(1,2,3),(2,3,1),(2,2,2)])
-#ell_seq_trajectory = set([(1,1,1,1,2), (2,1,1,1,1)])
+#ell_seq_trajectory = set([(1,1,1,1,1),(1,1,1,1,2), (2,1,2,1,1), (3,1,1,1,2)])
+'''
+# Parallelized version, but not fast after all...
 print(f'Number of unique ell-sequences before domino completion: {len(ell_seq_trajectory)}')
 tic = time.perf_counter()
 missing = None
 flag_missing = 0
 ell_seq_trajectory = np.array(list(l_seq for l_seq in ell_seq_trajectory), dtype=int)
+new_ell_seq_trajectory = ell_seq_trajectory.copy()
 u = 1
+L = len(ell_seq_trajectory)
 tic = time.perf_counter()
 while True:
-    L = len(ell_seq_trajectory)
-    prefixes = np.empty((L,ell-1), dtype=int)
-    suffixes = np.empty((L,ell-1), dtype=int)
-    # Get prefixes and suffixes
-    for i in range(L):
-        prefixes[i] = ell_seq_trajectory[i][0:ell-1]
-        suffixes[i] = ell_seq_trajectory[i][-ell+1:]
-    # Check if any suffix is missing in the prefix
-    for i in range(L):
+    L_complete = len(new_ell_seq_trajectory)
+
+    # Check if any suffix is missing in the prefix and remove complete suffixes
+    complete_suffixes = []
+    for i in range(len(ell_seq_trajectory)):
         # Select l-sequence to be completed
-        if not np.all(suffixes[i] == prefixes, axis=1).any():
+        matched_suffix_flag = 0
+        for j in range(L_complete):
+            # There exists a prefix that matches the suffix
+            if np.array_equal(ell_seq_trajectory[i][-ell+1:], new_ell_seq_trajectory[j][0:ell - 1]):
+                matched_suffix_flag = 1
+                complete_suffixes.append(i)
+                break
+        # No match is found
+        if matched_suffix_flag == 0:
             missing = ell_seq_trajectory[i]
             flag_missing = 1
             break
         else:
             flag_missing = 0
+    # Remove complete suffixes
+    ell_seq_trajectory = np.delete(ell_seq_trajectory, complete_suffixes, axis=0)
+    #print("Missing ", missing)
+    concatenated_sequence = None
+
+    # Count the number of CPU cores
+    num_processes = mp.cpu_count()
+
+    # Split new_ell_seq_trajectory into chunks to be processed by each process
+    chunk_size = int(np.ceil(len(new_ell_seq_trajectory) / num_processes))
+
+    # Create a multiprocessing queue to receive results
+    result_queue = mp.Queue()
+
+    # Minimal completion
+    if flag_missing == 1:
+
+        # Find the largest l resulting in a match
+        for l in reversed(range(1, ell - 1)):
+
+            # Create a list of processes
+            processes = []
+
+            # Assign a chunk of new_ell_seq_trajectory to each process
+            for i in range(num_processes):
+                start_idx = i * chunk_size
+                end_idx = min((i + 1) * chunk_size, len(new_ell_seq_trajectory))
+                p = mp.Process(target=match_rows, args=(missing, new_ell_seq_trajectory, l, start_idx, end_idx, result_queue))
+                processes.append(p)
+
+            # Start the processes
+            for p in processes:
+                p.start()
+
+            # Wait for all processes to complete
+            for p in processes:
+                p.join()
+
+            # Check if any matches were found
+            if result_queue.empty():
+                match = None
+            else:
+                # Get the first match
+                match = result_queue.get()
+
+            # Terminate the remaining processes
+            for p in processes:
+                if p.is_alive():
+                    p.terminate()
+
+            # Concatenate matching sequences
+            if match is not None:
+                concatenated_sequence = np.concatenate((missing, match[l:]))
+                break
+
+        # No minimal completion found
+        if concatenated_sequence is None:
+            print("No minimal completion found, Error!")
+            assert concatenated_sequence is not None
+            break
+        # Obtain every subsequence of length ell from concatenated_sequence except the last one and first one and append
+        # to new_ell_seq_trajectory, sinde they are already completed
+        for i in range(len(concatenated_sequence)-ell-1):
+            #print(concatenated_sequence[1+i:1+i+ell])
+            new_ell_seq_trajectory = np.append(new_ell_seq_trajectory, [concatenated_sequence[1 + i:1 + i + ell]], axis=0)
+    else:
+        break
+    # Print every now and then
+    if (L_complete-L)/L > u/1000:
+        toc = time.perf_counter()
+        print(f'Elapsed time: {toc-tic:0.4f} seconds')
+        print(f'Remaining ell-sequences: {len(ell_seq_trajectory)}')
+        print(f'Number of unique ell-sequences after domino completion: {L_complete}')
+        print(f'Percentage of ell-sequences added wrt to the original set: {u/10}%')
+        u = u + 1
+        tic = toc
+toc = time.perf_counter()
+print(f'Elapsed time: {toc-tic:0.4f} seconds')
+print(f'Number of unique ell-sequences after domino completion: {len(new_ell_seq_trajectory)}')
+exit()
+ell_seq_trajectory = new_ell_seq_trajectory.copy()
+'''
+
+print(f'Number of unique ell-sequences before domino completion: {len(ell_seq_trajectory)}')
+tic = time.perf_counter()
+missing = None
+flag_missing = 0
+ell_seq_trajectory = np.array(list(l_seq for l_seq in ell_seq_trajectory), dtype=int)
+new_ell_seq_trajectory = ell_seq_trajectory.copy()
+u = 1
+L = len(ell_seq_trajectory)
+tic = time.perf_counter()
+while True:
+    L_complete = len(new_ell_seq_trajectory)
+
+    # Check if any suffix is missing in the prefix and remove complete suffixes
+    complete_suffixes = []
+    for i in range(len(ell_seq_trajectory)):
+        # Select l-sequence to be completed
+        matched_suffix_flag = 0
+        for j in range(L_complete):
+            # There exists a prefix that matches the suffix
+            if np.array_equal(ell_seq_trajectory[i][-ell+1:], new_ell_seq_trajectory[j][0:ell - 1]):
+                matched_suffix_flag = 1
+                complete_suffixes.append(i)
+                break
+        # No match is found
+        if matched_suffix_flag == 0:
+            missing = ell_seq_trajectory[i]
+            flag_missing = 1
+            break
+        else:
+            flag_missing = 0
+    # Remove complete suffixes
+    ell_seq_trajectory = np.delete(ell_seq_trajectory, complete_suffixes, axis=0)
     #print("Missing ", missing)
     concatenated_sequence = None
     # Minimal completion
     if flag_missing == 1:
-        for l in reversed(range(1, ell-1)):
-            for i in range(L):
-                if np.array_equal(missing[-l:], prefixes[i][0:l]):
-                    #print(ell_seq_trajectory[i])
-                    concatenated_sequence = np.concatenate((missing, ell_seq_trajectory[i][l:]))
+        for l in reversed(range(1, ell - 1)):
+            for i in range(L_complete):
+                if np.array_equal(missing[-l:], new_ell_seq_trajectory[i][0:l]):
+                    #print("Candidate for merge:", new_ell_seq_trajectory[i])
+                    concatenated_sequence = np.concatenate((missing, new_ell_seq_trajectory[i][l:]))
                     #print(concatenated_sequence)
                     break
             if concatenated_sequence is not None:
                 break
         # No minimal completion found
         if concatenated_sequence is None:
-            print("No minimal completion found, Error!")
+            #print("No minimal completion found, Error!")
             assert concatenated_sequence is not None
             break
-        # Obtain every subsequence of length ell from concatenated_sequence except the last one and first one
+        # Obtain every subsequence of length ell from concatenated_sequence except the last one and first one and append
+        # to new_ell_seq_trajectory, sinde they are already completed
         for i in range(len(concatenated_sequence)-ell-1):
-            ell_seq_trajectory = np.append(ell_seq_trajectory, [concatenated_sequence[1+i:1+i+ell]], axis=0)
-        #print("All ell-seq:", ell_seq_trajectory)
+            #print(concatenated_sequence[1+i:1+i+ell])
+            new_ell_seq_trajectory = np.append(new_ell_seq_trajectory, [concatenated_sequence[1 + i:1 + i + ell]], axis=0)
     else:
         break
-    # Check if the first ell-1 entries of every element in ell_seq_trajectory concide with the last ell-1 entries of any other element
-    if L/u > 10000:
+    # Print every now and then
+    if (L_complete-L)/L > u/100:
         toc = time.perf_counter()
         print(f'Elapsed time: {toc-tic:0.4f} seconds')
-        print(f'Number of unique ell-sequences after domino completion: {L}')
+        print(f'Remaining ell-sequences: {len(ell_seq_trajectory)}')
+        print(f'Number of unique ell-sequences after domino completion: {L_complete}')
+        print(f'Percentage of ell-sequences added wrt to the original set: {u}%')
         u = u + 1
         tic = toc
 toc = time.perf_counter()
 print(f'Elapsed time: {toc-tic:0.4f} seconds')
-print(f'Number of unique ell-sequences after domino completion: {len(ell_seq_trajectory)}')
+print(f'Number of unique ell-sequences after domino completion: {len(new_ell_seq_trajectory)}')
 
-# Double check that set is domino complete
+ell_seq_trajectory = new_ell_seq_trajectory.copy()
 
 ell_seq_trajectory = set(tuple(s) for s in ell_seq_trajectory)
+'''
+# Double check that set is domino complete
+
+
 
 print(f'Number of unique ell-sequences before domino completion: {len(ell_seq_trajectory)}')
-tic = time.perf_counter()
 prefixes = set()
 suffixes = set()
 u = 1
 missing = set()
-tic = time.perf_counter()
+outer_tic = time.perf_counter()
 while True:
     for l_seq in ell_seq_trajectory:
         prefixes.add(l_seq[0:ell-1])
@@ -288,10 +422,10 @@ while True:
         print(f'Number of unique ell-sequences after domino completion: {len(ell_seq_trajectory)}')
         u = u + 1
         tic = toc
-toc = time.perf_counter()
-print(f'Elapsed time: {toc-tic:0.4f} seconds')
+outer_toc = time.perf_counter()
+print(f'Elapsed time: {outer_toc-outer_tic:0.4f} seconds')
 print(f'Number of unique ell-sequences after domino completion: {len(ell_seq_trajectory)}')
-
+'''
 #################################
 # new data
 #################################
