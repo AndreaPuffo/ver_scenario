@@ -4,7 +4,7 @@ import itertools
 from scipy.special import comb
 
 ### Number of i.c.
-N = 10e5
+N = 10e1
 ### gamma < 1/32
 gamma = 1/64
 #

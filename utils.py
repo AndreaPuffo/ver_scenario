@@ -290,7 +290,6 @@ def get_sequences_stats(all_trajectory_parts, ell, time_steps):
 
     ell_seq_trajectory = set()
     ell_seq_init = set()
-    ell_seq_rnd = set()
     for trajectory_parts in all_trajectory_parts:
         idx = 0
         for idx in range(0, time_steps-ell+1):
@@ -298,13 +297,8 @@ def get_sequences_stats(all_trajectory_parts, ell, time_steps):
         # find all ell-seq from INITIAL STATE
         ell_seq_init.add(tuple(trajectory_parts[0:ell]))
         # find ONE ell-seq from a trajectory at a random point
-        if idx == 0:
-            rand_idx = 0
-        else:
-            rand_idx = np.random.randint(0, idx)  # idx is at "max" point, so use it as upper bound of random generation
-        ell_seq_rnd.add(tuple(trajectory_parts[rand_idx:rand_idx+ell]))
 
-    return ell_seq_trajectory, ell_seq_init, ell_seq_rnd
+    return ell_seq_trajectory, ell_seq_init
 
 def get_partition_stats(all_trajectory_parts, ell):
     """
@@ -446,7 +440,7 @@ def set_cover(universe, subsets):
 
 # replace greedy_set_cover
 #@timer
-def greedy_set_cover(subsets, parent_set):
+def greedy_set_cover(subsets: set, parent_set: set):
     #parent_set = set(e for s in parent_set for e in s)
     max = len(parent_set)
     # create the initial heap. Note 'subsets' can be unsorted,

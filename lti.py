@@ -42,7 +42,7 @@ print(f'Model Eigenvalues: {eigs}, contraction rate: {contraction}')
 tmax, dt = 8, 1
 t = np.arange(0, tmax+dt, dt)
 # Initial conditions: theta1, dtheta1/dt, theta2, dtheta2/dt.
-N_traj = 1000000
+N_traj = 100000
 H = tmax + 1
 n_vars = 2
 
@@ -55,7 +55,7 @@ for i in tqdm.tqdm(range(N_traj)):
 # boundaries for system are [0,1]
 x_bounds = domain_bounds
 y_bounds = domain_bounds
-n_partitions = 82-1
+n_partitions = 10-1
 parts_x_idx = np.linspace(x_bounds[0], x_bounds[1], n_partitions+1)
 parts_y_idx = np.linspace(y_bounds[0], y_bounds[1], n_partitions+1)
 boundaries = [parts_x_idx, parts_y_idx]
@@ -72,22 +72,20 @@ all_trajectory_parts = partitions_grid(all_positions, boundaries, N_traj, H)
 print(f'Partitions: {all_trajectory_parts}')
 
 # find all ell-sequences from a trajectory
-ell = H
+ell = 3
 
 assert ell <= H
 
 print(f'Total trajectories: {N_traj}. \nVisitable ell-sequences: {(parts_per_axis)**(n_vars*ell)}. ')
 
-ell_seq_trajectory, ell_seq_init, ell_seq_rnd = get_sequences_stats(all_trajectory_parts, ell, H)
+ell_seq_trajectory, ell_seq_init = get_sequences_stats(all_trajectory_parts, ell, H)
 
-if len(ell_seq_trajectory) > len(ell_seq_init) and len(ell_seq_trajectory) > len(ell_seq_rnd):
+if len(ell_seq_trajectory) > len(ell_seq_init):
     print(f'Visited ell-sequences are more than the initial ones: \n'
-          f'visited {len(ell_seq_trajectory)}, initial: {len(ell_seq_init)}, '
-          f'random: {len(ell_seq_rnd)}.')
-elif len(ell_seq_trajectory) == len(ell_seq_rnd) and len(ell_seq_trajectory) > len(ell_seq_init):
+          f'visited {len(ell_seq_trajectory)}, initial: {len(ell_seq_init)}.')
+elif len(ell_seq_trajectory) > len(ell_seq_init):
     print(f'Randomly picked ell-sequences == visited partitions: \n'
-          f'visited {len(ell_seq_trajectory)}, initial: {len(ell_seq_init)}, '
-          f'random: {len(ell_seq_rnd)}.')
+          f'visited {len(ell_seq_trajectory)}, initial: {len(ell_seq_init)}.')
 else:
     print(f'Same number of seen and initial sequences: ({len(ell_seq_init)}).')
 
@@ -101,7 +99,7 @@ if ell < H:
             seq_of_ell_seq.append(tuple(H_seq[i:i+ell]))
         subsets.append(set(seq_of_ell_seq))
     tic = time.perf_counter()
-    num_sets = greedy_set_cover(subsets,ell_seq_trajectory)
+    num_sets = greedy_set_cover(subsets, ell_seq_trajectory)
     toc = time.perf_counter()
     print(f"Time elapsed: {toc - tic:0.4f} seconds")
 else:
