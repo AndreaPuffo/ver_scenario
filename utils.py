@@ -443,7 +443,8 @@ def set_cover(universe, subsets):
 def greedy_set_cover(subsets: set, parent_set: set):
     #parent_set = set(e for s in parent_set for e in s)
     max = len(parent_set)
-    # create the initial heap. Note 'subsets' can be unsorted,
+    # create the initial heap.
+    # Note 'subsets' can be unsorted,
     # so this is independent of whether remove_redunant_subsets is used.
     heap = []
     for s in subsets:
